@@ -20,7 +20,6 @@ export const createToolbarConfig = (
   // Navigation tools
   { type: "zoom-in" },
   { type: "zoom-out" },
-  { type: "spacer" },
   { type: "pager" },
   { type: "spacer" },
   
@@ -66,7 +65,7 @@ export const createToolbarConfig = (
   {
     type: "custom",
     id: "btnApplyRedactions",
-    title: "Sladd annoteringer",
+    title: "Sladd",
     onPress: async () => {
       try {
         await instance.applyRedactions();

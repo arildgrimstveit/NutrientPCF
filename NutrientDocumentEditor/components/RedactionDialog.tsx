@@ -1,6 +1,7 @@
+/* eslint-disable react/prop-types */
+// prop-types validation is disabled because TypeScript interfaces provide superior type checking
 import * as React from "react";
 import { NutrientViewerInstance } from "../types";
-import { redactPages, parsePageRange } from "../utils";
 
 interface RedactionDialogProps {
     show: boolean;
@@ -90,7 +91,7 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
                                 id="redact-current"
                                 name="redaction-option"
                                 checked={selectedOption === "current"}
-                                onChange={() => { }}
+                                readOnly
                                 style={{ cursor: "pointer", margin: 0, pointerEvents: "none" }}
                             />
                         </div>
@@ -122,7 +123,7 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
                                 id="redact-all"
                                 name="redaction-option"
                                 checked={selectedOption === "all"}
-                                onChange={() => { }}
+                                readOnly
                                 style={{ cursor: "pointer", margin: 0, pointerEvents: "none" }}
                             />
                         </div>
@@ -159,7 +160,7 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
                                 id="redact-range"
                                 name="redaction-option"
                                 checked={selectedOption === "range"}
-                                onChange={() => { }}
+                                readOnly
                                 style={{ cursor: "pointer", margin: 0, pointerEvents: "none" }}
                             />
                         </div>

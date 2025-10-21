@@ -191,7 +191,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         onOptionChange={setSelectedRedactionOption}
         onPageRangeChange={setPageRangeInput}
         onCancel={handleCancel}
-        onSubmit={handleSubmit}
+        onSubmit={() => void handleSubmit()}
       />
     </div>
   );

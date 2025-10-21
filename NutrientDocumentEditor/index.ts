@@ -8,9 +8,6 @@ export class NutrientDocumentEditor implements ComponentFramework.ReactControl<I
     private notifyOutputChanged: () => void;
     private pdfBase64 = ""; // Stores the saved PDF Base64
 
-    constructor() {
-    }
-
     /**
      * Used to initialize the control instance. Controls can kick off remote server calls and other initialization actions here.
      * Data-set values are not initialized here, use updateView.
