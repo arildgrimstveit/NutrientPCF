@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="NutrientDocumentNamespace" constructor="NutrientDocumentEditor" version="0.0.1" display-name-key="NutrientDocumentEditor" description-key="NutrientDocumentEditor description" control-type="virtual">
+    
+    <external-service-usage enabled="false" />
+
+    <!-- PDF document URL (preferred method) -->
+    <property name="documenturl" display-name-key="PDF Document URL" description-key="URL to PDF document (preferred method for all files)"
+        of-type="SingleLine.Text" required="false" usage="bound" />
+
+    <!-- PDF document Base64 (fallback for very small files) -->
+    <property name="document" display-name-key="Base64 PDF Document" description-key="Base64-encoded PDF document (fallback for files &lt; 100KB)"
+        of-type="SingleLine.Text" required="false" usage="bound" />
+
+    <!-- Force URL loading preference -->
+    <property name="preferurlloading" display-name-key="Prefer URL Loading" description-key="Force URL loading even for small files (true/false)"
+        of-type="TwoOptions" required="false" usage="bound" />
+
+    <!-- Maximum base64 size threshold -->
+    <property name="maxbase64size" display-name-key="Max Base64 Size (bytes)" description-key="Maximum size for base64 documents (default: 100KB)"
+        of-type="Whole.None" required="false" usage="bound" />
+
+    <!-- Viewer height -->
+    <property name="viewerheight" display-name-key="Viewer Height" description-key="Height of the PDF viewer"
+        of-type="Whole.None" required="true" usage="bound" />
+
+    <!-- Viewer width -->
+    <property name="viewerwidth" display-name-key="Viewer Width" description-key="Width of the PDF viewer"
+        of-type="Whole.None" required="true" usage="bound" />
+
+    <!-- PDF document after saving -->
+    <property name="pdfdocument" display-name-key="Saved PDF Document" description-key="Base64-encoded PDF after saving"
+        of-type="SingleLine.Text" required="false" usage="output" />
+
+    <resources>
+      <!-- Main TypeScript entry point -->
+      <code path="index.ts" order="1" />
+      <platform-library name="React" version="16.14.0" />
+      <platform-library name="Fluent" version="9.46.2" />
+    </resources>
+  </control>
+</manifest>
+
