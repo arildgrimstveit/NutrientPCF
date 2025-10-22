@@ -23,8 +23,16 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   const [loadingProgress, setLoadingProgress] = React.useState<{ loaded: number; total: number } | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // State for document loading
-  const [documentArrayBuffer, setDocumentArrayBuffer] = React.useState<ArrayBuffer | null>(null);
+  // Use a ref to track document changes for forcing remounts
+  const documentKeyRef = React.useRef(0);
+  const documentKey = React.useMemo(() => {
+    if (documentBase64 || documentUrl) {
+      documentKeyRef.current += 1;
+    } else {
+      documentKeyRef.current = 0;
+    }
+    return documentKeyRef.current;
+  }, [documentBase64, documentUrl]);
 
   // State for redaction dialog
   const [showRedactionDialog, setShowRedactionDialog] = React.useState(false);
@@ -32,50 +40,24 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   const [selectedRedactionOption, setSelectedRedactionOption] = React.useState<"current" | "all" | "range">("current");
   const pageRangeInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Document loading effect that handles both URL and Base64 inputs
-  // Only re-runs when documentBase64 or documentUrl changes
+  // Viewer initialization - runs when document source changes
+  // The container has a key={documentKey} so React will fully unmount/remount it on document change
   React.useEffect(() => {
-    const loadDocument = async () => {
-      if (!documentBase64 && !documentUrl) {
-        setDocumentArrayBuffer(null);
-        return;
-      }
-      setIsLoading(true);
-      setLoadingProgress(null);
-
-      try {
-        let buffer: ArrayBuffer;
-        if (documentUrl) {
-          buffer = await fetchDocumentFromUrl(documentUrl, (loaded, total) => {
-            setLoadingProgress({ loaded, total });
-          });
-        } else {
-          buffer = convertBase64ToArrayBuffer(documentBase64!);
-        }
-
-        setDocumentArrayBuffer(buffer);
-      } catch (error) {
-        console.error("Error loading document:", error);
-        setDocumentArrayBuffer(null);
-      } finally {
-        setIsLoading(false);
-        setLoadingProgress(null);
-      }
-    };
-
-    void loadDocument();
-  }, [documentBase64, documentUrl]);
-
-
-  React.useEffect(() => {
-    if (!documentArrayBuffer || !divRef.current) {
-      return;
-    }
-
-    let currentInstance: NutrientViewerInstance | null = null;
+    if (!documentBase64 && !documentUrl) return;
+    if (!divRef.current) return;
 
     const initViewer = async () => {
       try {
+        setIsLoading(true);
+
+        // Load the document fresh each time to avoid ArrayBuffer detachment issues
+        const documentBuffer = documentUrl
+          ? await fetchDocumentFromUrl(documentUrl, (loaded, total) => setLoadingProgress({ loaded, total }))
+          : convertBase64ToArrayBuffer(documentBase64!);
+
+        setIsLoading(false);
+        setLoadingProgress(null);
+
         await loadNutrientScript();
 
         const nutrient = window.NutrientViewer;
@@ -86,12 +68,11 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         const newInstance = await nutrient.load({
           disableWebAssemblyStreaming: true,
           container: divRef.current!,
-          document: documentArrayBuffer,
+          document: documentBuffer,
           enableHistory: true,
           locale: "nb-NO"
         });
 
-        currentInstance = newInstance;
         setInstance(newInstance);
 
         const toolbarItems = createToolbarConfig(newInstance, {
@@ -103,23 +84,25 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         newInstance.setToolbarItems(() => toolbarItems);
       } catch (err) {
         console.error("Error loading NutrientViewer:", err);
+        setIsLoading(false);
+        setLoadingProgress(null);
       }
     };
 
     void initViewer();
 
+    // Cleanup: unload when this specific container instance unmounts
     return () => {
-      if (currentInstance && divRef.current) {
+      if (divRef.current) {
         try {
           window.NutrientViewer?.unload(divRef.current);
         } catch (e) {
           console.warn("Error during unload:", e);
         }
-        currentInstance = null;
-        setInstance(null);
       }
+      setInstance(null);
     };
-  }, [documentArrayBuffer, onSave]);
+  }, [documentBase64, documentUrl, onSave]);
 
   // Handlers for redaction dialog
   const handleSubmit = React.useCallback(async () => {
@@ -163,6 +146,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
       }}
     >
       <div
+        key={documentKey}
         ref={divRef}
         role="application"
         aria-label="PDF Document Viewer"

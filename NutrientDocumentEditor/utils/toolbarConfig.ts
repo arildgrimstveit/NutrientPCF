@@ -44,7 +44,7 @@ export const createToolbarConfig = (
   {
     type: "custom",
     id: "btnDeleteAllAnnotations",
-    title: "Fjern annoteringer",
+    title: "Slett annoteringer",
     onPress: async () => {
       try {
         const pageCount = instance.totalPageCount ?? 0;
@@ -65,7 +65,7 @@ export const createToolbarConfig = (
   {
     type: "custom",
     id: "btnApplyRedactions",
-    title: "Sladd",
+    title: "Sladd annoteringer",
     onPress: async () => {
       try {
         await instance.applyRedactions();
