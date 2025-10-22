@@ -37,7 +37,8 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   // State for redaction dialog
   const [showRedactionDialog, setShowRedactionDialog] = React.useState(false);
   const [pageRangeInput, setPageRangeInput] = React.useState("");
-  const [selectedRedactionOption, setSelectedRedactionOption] = React.useState<"current" | "all" | "range">("current");
+  const [selectedRedactionOption, setSelectedRedactionOption] = React.useState<"current" | "range">("current");
+  const [dialogError, setDialogError] = React.useState("");
   const pageRangeInputRef = React.useRef<HTMLInputElement>(null);
 
   // Viewer initialization - runs when document source changes
@@ -70,7 +71,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           container: divRef.current!,
           document: documentBuffer,
           enableHistory: true,
-          locale: "nb-NO"
+          locale: "nb-NO",
         });
 
         setInstance(newInstance);
@@ -82,6 +83,20 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         });
 
         newInstance.setToolbarItems(() => toolbarItems);
+
+        // Custom annotation toolbar - (only delete selected annotations button)
+        newInstance.setAnnotationToolbarItems?.((annotation) => {
+          const annotations = Array.isArray(annotation) ? annotation : [annotation];
+          return [{
+            type: 'custom',
+            id: 'delete-selected',
+            title: 'Slett annotering',
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
+            onPress: async () => {
+              await newInstance.delete(annotations);
+            }
+          }];
+        });
       } catch (err) {
         console.error("Error loading NutrientViewer:", err);
         setIsLoading(false);
@@ -109,15 +124,12 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     if (!instance) return;
 
     try {
+      setDialogError(""); // Clear any previous errors
       const totalPages = instance.totalPageCount ?? 0;
 
       if (selectedRedactionOption === "current") {
         setShowRedactionDialog(false);
         await redactPages(instance, [instance.viewState.currentPageIndex]);
-      } else if (selectedRedactionOption === "all") {
-        setShowRedactionDialog(false);
-        const allPageIndices = Array.from({ length: totalPages }, (_, i) => i);
-        await redactPages(instance, allPageIndices);
       } else if (selectedRedactionOption === "range") {
         const pageIndices = parsePageRange(pageRangeInput, totalPages);
         setShowRedactionDialog(false);
@@ -125,7 +137,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         await redactPages(instance, pageIndices);
       }
     } catch (err) {
-      alert((err as Error).message);
+      setDialogError((err as Error).message);
     }
   }, [instance, selectedRedactionOption, pageRangeInput]);
 
@@ -133,8 +145,13 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     setShowRedactionDialog(false);
     setPageRangeInput("");
     setSelectedRedactionOption("current");
+    setDialogError("");
   }, []);
 
+  const handlePageRangeChange = React.useCallback((value: string) => {
+    setPageRangeInput(value);
+    setDialogError(""); // Clear error when user types
+  }, []);
 
   return (
     <div
@@ -172,8 +189,9 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         selectedOption={selectedRedactionOption}
         pageRangeInput={pageRangeInput}
         pageRangeInputRef={pageRangeInputRef}
+        errorMessage={dialogError}
         onOptionChange={setSelectedRedactionOption}
-        onPageRangeChange={setPageRangeInput}
+        onPageRangeChange={handlePageRangeChange}
         onCancel={handleCancel}
         onSubmit={() => void handleSubmit()}
       />

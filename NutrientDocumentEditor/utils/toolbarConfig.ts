@@ -23,9 +23,9 @@ export const createToolbarConfig = (
   { type: "pager" },
   { type: "spacer" },
   
-  // Redaction tools
-  { type: "redact-text-highlighter" },
-  { type: "redact-rectangle" },
+  // Redaction tools - separated to prevent grouping
+  { type: "redact-text-highlighter", dropdownGroup: null },
+  { type: "redact-rectangle", dropdownGroup: null },
   
   // Custom redaction button for whole pages
   {
@@ -44,20 +44,16 @@ export const createToolbarConfig = (
   {
     type: "custom",
     id: "btnDeleteAllAnnotations",
-    title: "Slett annoteringer",
+    title: "Slett alle annoteringer",
     onPress: async () => {
-      try {
-        const pageCount = instance.totalPageCount ?? 0;
-        const pages = await Promise.all(
-          Array.from({ length: pageCount }).map((_, i) => instance.getAnnotations(i))
-        );
-        const allAnnotations = pages.flatMap(annotations =>
-          Array.isArray(annotations) ? annotations : annotations.toArray()
-        );
-        await instance.delete(allAnnotations);
-      } catch (err) {
-        console.error("Error deleting all annotations:", err);
-      }
+      const pageCount = instance.totalPageCount ?? 0;
+      const pages = await Promise.all(
+        Array.from({ length: pageCount }).map((_, i) => instance.getAnnotations(i))
+      );
+      const allAnnotations = pages.flatMap(annotations =>
+        Array.isArray(annotations) ? annotations : annotations.toArray()
+      );
+      await instance.delete(allAnnotations);
     },
   },
   
@@ -79,7 +75,7 @@ export const createToolbarConfig = (
   {
     type: "custom",
     id: "btnSaveRedactedCopy",
-    title: "Lagre",
+    title: "Lagre dokument",
     onPress: async () => {
       try {
         const pdfBuffer = await instance.exportPDF();

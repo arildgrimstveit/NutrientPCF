@@ -6,10 +6,11 @@ import { NutrientViewerInstance } from "../types";
 interface RedactionDialogProps {
     show: boolean;
     instance: NutrientViewerInstance | null;
-    selectedOption: "current" | "all" | "range";
+    selectedOption: "current" | "range";
     pageRangeInput: string;
     pageRangeInputRef: React.RefObject<HTMLInputElement>;
-    onOptionChange: (option: "current" | "all" | "range") => void;
+    errorMessage: string;
+    onOptionChange: (option: "current" | "range") => void;
     onPageRangeChange: (value: string) => void;
     onCancel: () => void;
     onSubmit: () => void;
@@ -24,6 +25,7 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
     selectedOption,
     pageRangeInput,
     pageRangeInputRef,
+    errorMessage,
     onOptionChange,
     onPageRangeChange,
     onCancel,
@@ -101,39 +103,7 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
                         <div></div>
                     </div>
 
-                    {/* Option 2: All pages */}
-                    <div
-                        onClick={() => onOptionChange("all")}
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "auto auto 1fr",
-                            gap: "10px",
-                            alignItems: "center",
-                            minHeight: "40px",
-                            padding: "12px",
-                            borderBottom: "1px solid #ddd",
-                            cursor: "pointer",
-                            backgroundColor: selectedOption === "all" ? "#e3f2fd" : "transparent",
-                            transition: "background-color 0.2s ease"
-                        }}
-                    >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <input
-                                type="radio"
-                                id="redact-all"
-                                name="redaction-option"
-                                checked={selectedOption === "all"}
-                                readOnly
-                                style={{ cursor: "pointer", margin: 0, pointerEvents: "none" }}
-                            />
-                        </div>
-                        <label htmlFor="redact-all" style={{ fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                            Alle sider ({totalPages} sider)
-                        </label>
-                        <div></div>
-                    </div>
-
-                    {/* Option 3: Range with input field */}
+                    {/* Option 2: Range with input field */}
                     <div
                         onClick={(e) => {
                             // Don't trigger if clicking on the input field
@@ -197,6 +167,21 @@ export const RedactionDialog: React.FC<RedactionDialogProps> = React.memo(({
                         />
                     </div>
                 </div>
+
+                {/* Error message */}
+                {errorMessage && (
+                    <div style={{
+                        marginBottom: "16px",
+                        padding: "12px",
+                        backgroundColor: "#fee",
+                        border: "1px solid #fcc",
+                        borderRadius: "4px",
+                        color: "#c33",
+                        fontSize: "14px",
+                    }}>
+                        {errorMessage}
+                    </div>
+                )}
 
                 {/* Footer buttons */}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>

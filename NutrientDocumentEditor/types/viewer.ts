@@ -10,6 +10,7 @@ export interface ViewState {
 
 export interface NutrientViewerInstance {
   setToolbarItems: (callback: (items: unknown[]) => unknown[]) => void;
+  setAnnotationToolbarItems?: (callback: (annotation: unknown) => unknown[]) => void;
   exportPDF: () => Promise<ArrayBuffer>;
   totalPageCount?: number;
   getAnnotations: (pageIndex: number) => Promise<unknown[] | { toArray: () => unknown[] }>;
