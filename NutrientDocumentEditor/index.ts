@@ -1,6 +1,5 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import NutrientViewerComponent from "./NutrientViewerComponent";
-import ExampleUsage from "./ExampleUsage";
 import * as React from "react";
 
 export class NutrientDocumentEditor
@@ -15,6 +14,9 @@ export class NutrientDocumentEditor
   
   // Track whether we have a saved version that should be displayed
   private hasSavedVersion = false;
+  
+  // Cache the bound onSave callback to maintain stable reference
+  private boundHandleSave = this.handleSave.bind(this);
 
   /**
    * Used to initialize the control instance. Controls can kick off remote server calls and other initialization actions here.
@@ -30,19 +32,6 @@ export class NutrientDocumentEditor
     _container: HTMLDivElement
   ): void {
     this.notifyOutputChanged = notifyOutputChanged;
-    
-    // Preload Nutrient SDK script early to avoid delays on first document load
-    // This helps especially in Dynamics environment where resources load slower
-    if (!document.getElementById("nutrient-sdk-script")) {
-      console.log("Preloading Nutrient SDK in PCF init");
-      const script = document.createElement("script");
-      script.id = "nutrient-sdk-script";
-      script.src = "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.8.0/nutrient-viewer.js";
-      script.async = true;
-      script.onload = () => console.log("Nutrient SDK preloaded successfully");
-      script.onerror = () => console.error("Failed to preload Nutrient SDK");
-      document.body.appendChild(script);
-    }
   }
 
   /**
@@ -53,18 +42,10 @@ export class NutrientDocumentEditor
   public updateView(
     context: ComponentFramework.Context<IInputs>
   ): React.ReactElement {
-    // Set this to true to test the example component (local development),
-    // false for production
-    const useExample = false;
-
-    if (useExample) {
-      return React.createElement(ExampleUsage);
-    }
-
     const documentBase64 = context.parameters.document.raw ?? "";
     const documentUrl = context.parameters.documenturl.raw ?? "";
 
-    // Detect if a NEW document has been loaded (different from the last one we saw)
+    // Detect if a new document has been loaded
     const isNewDocument = 
       (documentBase64 !== this.lastDocumentBase64) || 
       (documentUrl !== this.lastDocumentUrl);
@@ -78,7 +59,7 @@ export class NutrientDocumentEditor
     }
 
     // Determine which document to display:
-    // - If we have a saved version AND it's not a new document, use the saved version
+    // - If we have a saved version and it's not a new document, use the saved version
     // - Otherwise, use the original input
     let displayDocumentBase64 = documentBase64;
     let displayDocumentUrl = documentUrl;
@@ -89,18 +70,21 @@ export class NutrientDocumentEditor
       displayDocumentUrl = ""; // Clear URL since we're using base64
     }
 
+    const viewerHeight = context.parameters.viewerheight.raw ?? 600;
+    const viewerWidth = context.parameters.viewerwidth.raw ?? 800;
+
     return React.createElement(NutrientViewerComponent, {
       documentBase64: displayDocumentBase64 || undefined,
       documentUrl: displayDocumentUrl || undefined,
-      viewerHeight: context.parameters.viewerheight.raw ?? 600,
-      viewerWidth: context.parameters.viewerwidth.raw ?? 800,
-      onSave: this.handleSave.bind(this),
+      viewerHeight,
+      viewerWidth,
+      onSave: this.boundHandleSave,
     });
   }
 
   private handleSave(pdfBase64: string) {
     this.pdfBase64 = pdfBase64;
-    this.hasSavedVersion = true; // Mark that we now have a saved version to display
+    this.hasSavedVersion = true;
     this.notifyOutputChanged();
   }
 
@@ -119,6 +103,6 @@ export class NutrientDocumentEditor
    * i.e. cancelling any pending remote calls, removing listeners, etc.
    */
   public destroy(): void {
-    // Add code to cleanup control if necessary
+    // Cleanup is handled by NutrientViewerComponent's useEffect cleanup
   }
 }

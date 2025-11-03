@@ -31,14 +31,9 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<ErrorDetails | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
-
-  // Generate a stable key based on document content to detect changes
-  const documentKey = React.useMemo(() => {
-    if (!documentBase64 && !documentUrl) return 'no-document';
-    const base64Hash = documentBase64 ? documentBase64.slice(0, 100) : '';
-    const urlHash = documentUrl ?? '';
-    return `${base64Hash}-${urlHash}`;
-  }, [documentBase64, documentUrl]);
+  
+  // Use a ref for initial mount check to avoid triggering effect re-runs
+  const isInitialMountRef = React.useRef(true);
 
   // State for redaction dialog
   const [showRedactionDialog, setShowRedactionDialog] = React.useState(false);
@@ -49,63 +44,74 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
 
   // Viewer initialization effect
   React.useEffect(() => {
-    if (!documentBase64 && !documentUrl) return;
+    if (!documentBase64 && !documentUrl) {
+      // No document loaded yet - don't show error on initial mount
+      if (!isInitialMountRef.current) {
+        setError({
+          code: "NO_DOCUMENT",
+          message: "No document loaded",
+          technicalDetails: "No document source (base64 or URL) provided",
+          timestamp: new Date(),
+        });
+      }
+      return;
+    }
+    
+    // Mark that we're past the initial mount
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+    }
+    
     if (!divRef.current) return;
 
     const containerElement = divRef.current;
     let loadedInstance: NutrientViewerInstance | null = null;
+    let isCancelled = false;
 
     const initViewer = async () => {
       try {
+        // Brief delay to allow Dynamics environment to stabilize
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        if (isCancelled) return;
+
         setIsLoading(true);
         setError(null);
 
-        // STEP 1: Unload any existing instance
-        try {
-          if (window.NutrientViewer && containerElement) {
+        // Unload any existing instance to prevent memory leaks
+        if (window.NutrientViewer && containerElement) {
+          try {
             window.NutrientViewer.unload(containerElement);
-            console.log("STEP 1: Existing instance unloaded");
+          } catch (e) {
+            // Ignore error if no instance was loaded
           }
-        } catch (e) {
-          // This is expected if no instance exists
-          console.log("STEP 1: No existing instance to unload");
         }
 
-        // STEP 2: Load the Nutrient SDK script
-        console.log("STEP 2: Loading Nutrient SDK script...");
+        // Load the Nutrient SDK script
         await loadNutrientScript();
-        console.log("STEP 2: Nutrient SDK script loaded successfully");
 
-        // STEP 3: Load the document
-        console.log("STEP 3: Loading document...");
+        // Load the document
         let documentBuffer: ArrayBuffer;
 
         if (documentUrl) {
-          console.log("STEP 3a: Fetching document from URL:", documentUrl);
           documentBuffer = await fetchDocumentFromUrl(documentUrl, (loaded, total) => {
             setLoadingProgress({ loaded, total });
           });
-          console.log("STEP 3a: Document fetched from URL successfully");
         } else if (documentBase64) {
-          console.log("STEP 3b: Converting base64 to ArrayBuffer");
           documentBuffer = convertBase64ToArrayBuffer(documentBase64);
-          console.log("STEP 3b: Document converted successfully");
         } else {
-          throw new Error("STEP 3: Ingen dokument tilgjengelig");
+          throw new Error("No document available");
         }
 
         setLoadingProgress(null);
 
-        // STEP 4: Verify NutrientViewer API is available
-        console.log("STEP 4: Verifying NutrientViewer API...");
+        // Verify NutrientViewer API is available
         const nutrient = window.NutrientViewer;
         if (!nutrient) {
-          throw new Error("STEP 4: NutrientViewer API ikke tilgjengelig etter skriptlasting");
+          throw new Error("NutrientViewer API not available");
         }
-        console.log("STEP 4: NutrientViewer API verified");
 
-        // STEP 5: Load the Nutrient instance
-        console.log("STEP 5: Loading Nutrient instance into container...");
+        // Load the Nutrient instance
         loadedInstance = await nutrient.load({
           disableWebAssemblyStreaming: true,
           container: containerElement,
@@ -113,10 +119,8 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           enableHistory: true,
           locale: "nb-NO",
         });
-        console.log("STEP 5: Nutrient instance loaded successfully");
 
-        // STEP 6: Configure toolbar
-        console.log("STEP 6: Configuring toolbar...");
+        // Configure toolbar
         const toolbarItems = createToolbarConfig(loadedInstance, {
           onShowRedactionDialog: () => setShowRedactionDialog(true),
           onSave,
@@ -150,25 +154,17 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
             }
           ];
         });
-        console.log("STEP 6: Toolbar configured successfully");
 
         setInstance(loadedInstance);
         setIsLoading(false);
-        console.log("SUCCESS: Nutrient viewer initialized completely");
 
       } catch (err) {
-        console.error("ERROR during initialization:", err);
+        console.error("Error initializing Nutrient viewer:", err);
 
-        // Create detailed error information
         const errorMessage = err instanceof Error ? err.message : String(err);
-        const stepRegex = /STEP \d[a-z]?/;
-        const stepMatch = stepRegex.exec(errorMessage);
-        const errorCode = errorMessage.includes("STEP")
-          ? stepMatch?.[0].replace(" ", "_") ?? "ERR_UNKNOWN"
-          : "ERR_UNKNOWN";
-
+        
         setError({
-          code: errorCode,
+          code: "INITIALIZATION_ERROR",
           message: errorMessage,
           technicalDetails: err instanceof Error ? err.stack ?? errorMessage : errorMessage,
           timestamp: new Date(),
@@ -182,17 +178,17 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
 
     // Cleanup on unmount
     return () => {
-      console.log("CLEANUP: Unmounting component");
+      isCancelled = true;
       if (loadedInstance && containerElement) {
         try {
           window.NutrientViewer?.unload(containerElement);
-          console.log("CLEANUP: Instance unloaded successfully");
         } catch (e) {
-          console.warn("CLEANUP: Error during unload:", e);
+          console.warn("Error unloading Nutrient instance:", e);
         }
       }
     };
-  }, [documentBase64, documentUrl, onSave, retryCount, documentKey]);
+  }, [documentBase64, documentUrl, retryCount]);
+  // Note: onSave is intentionally excluded from deps to prevent remount when PCF updateView creates new function reference
 
   // Handlers for redaction dialog
   const handleSubmit = React.useCallback(async () => {
@@ -228,6 +224,9 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     setDialogError("");
   }, []);
 
+  // Show a friendly "waiting for document" message on initial mount when no document is loaded
+  const showWaitingState = isInitialMountRef.current && !documentBase64 && !documentUrl;
+
   return (
     <div
       style={{
@@ -238,7 +237,6 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
       }}
     >
       <div
-        key={documentKey}
         ref={divRef}
         role="application"
         aria-label="PDF Document Viewer"
@@ -254,6 +252,32 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           outline: "none",
         }}
       />
+      {showWaitingState && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            padding: "32px",
+            backgroundColor: "#fff",
+            border: "2px solid #0078d4",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            maxWidth: "400px",
+            width: "90%",
+            textAlign: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ color: "#0078d4", fontSize: "18px", fontWeight: "600", marginBottom: "12px" }}>
+            📄 Venter på dokument
+          </div>
+          <div style={{ fontSize: "14px", color: "#605e5c", lineHeight: "1.5" }}>
+            Dokumentviseren er klar. Last inn et dokument for å komme i gang.
+          </div>
+        </div>
+      )}
       {error && (
         <div
           style={{

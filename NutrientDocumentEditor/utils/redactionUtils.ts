@@ -58,8 +58,6 @@ export const redactPages = async (
 
     // Apply all redactions at once
     await nutrientInstance.applyRedactions();
-
-    console.log(`Successfully redacted ${pageIndices.length} page(s)`);
   } catch (err) {
     console.error("Error redacting pages:", err);
   }
