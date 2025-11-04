@@ -1,22 +1,17 @@
-/**
- * Utilities for handling page redactions in Nutrient documents
- */
-
 import nutrient from "@nutrient-sdk/viewer";
 import { NutrientViewerInstance } from "../types";
 
-/**
- * Redacts a single page by creating a full-page redaction annotation
- * @param nutrientInstance - The Nutrient viewer instance
- * @param pageIndex - The zero-based index of the page to redact
- */
+// Redact a single page with a full-page redaction annotation
 export const redactPage = async (
   nutrientInstance: NutrientViewerInstance,
   pageIndex: number
 ): Promise<void> => {
   try {
     // Get page dimensions
-    const pageInfo = await nutrientInstance.pageInfoForIndex(pageIndex);
+    const pageInfo = nutrientInstance.pageInfoForIndex(pageIndex);
+    if (!pageInfo) {
+      throw new Error(`Could not get page info for page ${pageIndex + 1}`);
+    }
     const { width, height } = pageInfo;
 
     // Create a rectangle covering the entire page
@@ -42,11 +37,7 @@ export const redactPage = async (
   }
 };
 
-/**
- * Redacts multiple pages and applies the redactions
- * @param nutrientInstance - The Nutrient viewer instance
- * @param pageIndices - Array of zero-based page indices to redact
- */
+// Redact multiple pages and apply redactions
 export const redactPages = async (
   nutrientInstance: NutrientViewerInstance,
   pageIndices: number[]
@@ -64,13 +55,7 @@ export const redactPages = async (
   }
 };
 
-/**
- * Parses a page range string and converts it to an array of zero-based page indices
- * @param input - The page range string (e.g., "1-3" or "1,3,5" or "1-3,5,7-9")
- * @param totalPages - The total number of pages in the document
- * @returns Array of zero-based page indices
- * @throws Error if the input format is invalid
- */
+// Parse page range string (e.g., "1-3,5,7-9") to zero-based page indices
 export const parsePageRange = (input: string, totalPages: number): number[] => {
   const pageIndices: number[] = [];
   const parts = input.split(",").map(p => p.trim());

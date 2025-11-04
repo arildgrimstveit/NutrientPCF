@@ -8,16 +8,17 @@ export interface ViewState {
   currentPageIndex: number;
 }
 
+// Simplified interface matching only the methods we actually use
 export interface NutrientViewerInstance {
-  setToolbarItems: (callback: (items: unknown[]) => unknown[]) => void;
-  setAnnotationToolbarItems?: (callback: (annotation: unknown) => unknown[]) => void;
+  setToolbarItems: (items: any) => void;
+  setAnnotationToolbarItems?: (callback: (annotation: any) => any) => void;
   exportPDF: () => Promise<ArrayBuffer>;
   totalPageCount?: number;
-  getAnnotations: (pageIndex: number) => Promise<unknown[] | { toArray: () => unknown[] }>;
-  delete: (items: unknown[]) => Promise<void>;
+  getAnnotations: (pageIndex: number) => Promise<any>;
+  delete: (items: any) => Promise<any>;
   viewState: ViewState;
-  pageInfoForIndex: (pageIndex: number) => Promise<PageInfo>;
-  create: (annotation: unknown) => Promise<unknown>;
+  pageInfoForIndex: (pageIndex: number) => PageInfo | null;
+  create: (annotation: any) => Promise<any>;
   applyRedactions: () => Promise<void>;
 }
 
@@ -35,8 +36,6 @@ export interface RedactionAnnotation {
 }
 
 export interface ErrorDetails {
-  code: string;
   message: string;
   technicalDetails: string;
-  timestamp: Date;
 }

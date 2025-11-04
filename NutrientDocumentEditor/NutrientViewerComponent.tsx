@@ -79,7 +79,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           container: containerElement,
           document: documentBuffer,
           locale: "nb-NO",
-        }) as unknown as NutrientViewerInstance;
+        }) as NutrientViewerInstance;
 
         // Configure toolbar
         const toolbarItems = createToolbarConfig(loadedInstance, {
@@ -87,7 +87,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           onSave,
           convertArrayBufferToBase64,
         });
-        loadedInstance.setToolbarItems(() => toolbarItems);
+        loadedInstance.setToolbarItems(toolbarItems);
 
         // Configure annotation toolbar
         loadedInstance.setAnnotationToolbarItems?.((annotation) => {
@@ -125,10 +125,8 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         const errorMessage = err instanceof Error ? err.message : String(err);
         
         setError({
-          code: "INITIALIZATION_ERROR",
           message: errorMessage,
           technicalDetails: err instanceof Error ? err.stack ?? errorMessage : errorMessage,
-          timestamp: new Date(),
         });
         setIsLoading(false);
         setLoadingProgress(null);
@@ -245,74 +243,34 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            padding: "32px",
+            padding: "24px",
             backgroundColor: "#fff",
             border: "2px solid #d13438",
             borderRadius: "8px",
             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
             maxWidth: "500px",
             width: "90%",
-            textAlign: "left",
             zIndex: 1000,
           }}
         >
-          <div style={{ color: "#d13438", fontSize: "20px", fontWeight: "600", marginBottom: "16px" }}>
-            ⚠️ Feil ved lasting av dokument
+          <div style={{ color: "#d13438", fontSize: "18px", fontWeight: "600", marginBottom: "12px" }}>
+            ⚠️ {error.message}
           </div>
 
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "12px", fontWeight: "600", color: "#323130", marginBottom: "4px" }}>
-              FEILKODE:
-            </div>
-            <div style={{
-              fontSize: "14px",
-              fontFamily: "monospace",
-              backgroundColor: "#f3f2f1",
-              padding: "8px",
-              borderRadius: "4px",
-              color: "#d13438",
-              fontWeight: "bold"
-            }}>
-              {error.code}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "12px", fontWeight: "600", color: "#323130", marginBottom: "4px" }}>
-              FEILMELDING:
-            </div>
-            <div style={{ fontSize: "14px", color: "#605e5c", lineHeight: "1.5" }}>
-              {error.message}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "16px" }}>
-            <div style={{ fontSize: "12px", fontWeight: "600", color: "#323130", marginBottom: "4px" }}>
-              TIDSPUNKT:
-            </div>
-            <div style={{ fontSize: "13px", color: "#605e5c", fontFamily: "monospace" }}>
-              {error.timestamp.toLocaleString('nb-NO')}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "20px", paddingTop: "12px", borderTop: "1px solid #edebe9" }}>
-            <div style={{ fontSize: "11px", color: "#a19f9d", marginBottom: "4px" }}>
-              Tekniske detaljer:
-            </div>
-            <div style={{
-              fontSize: "11px",
-              fontFamily: "monospace",
-              backgroundColor: "#f3f2f1",
-              padding: "8px",
-              borderRadius: "4px",
-              maxHeight: "100px",
-              overflow: "auto",
-              color: "#605e5c",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-all"
-            }}>
-              {error.technicalDetails}
-            </div>
+          <div style={{
+            fontSize: "11px",
+            fontFamily: "monospace",
+            backgroundColor: "#f3f2f1",
+            padding: "12px",
+            borderRadius: "4px",
+            maxHeight: "120px",
+            overflow: "auto",
+            color: "#605e5c",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all",
+            marginBottom: "16px"
+          }}>
+            {error.technicalDetails}
           </div>
 
           <button
@@ -322,7 +280,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
             }}
             style={{
               width: "100%",
-              padding: "12px 20px",
+              padding: "10px 16px",
               backgroundColor: "#0078d4",
               color: "white",
               border: "none",

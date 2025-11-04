@@ -1,7 +1,3 @@
-/**
- * Toolbar configuration utilities for Nutrient Viewer
- */
-
 import { NutrientViewerInstance } from "../types";
 
 interface ToolbarHandlers {
@@ -10,9 +6,6 @@ interface ToolbarHandlers {
   convertArrayBufferToBase64: (buffer: ArrayBuffer) => string;
 }
 
-/**
- * Creates toolbar configuration for the Nutrient viewer
- */
 export const createToolbarConfig = (
   instance: NutrientViewerInstance,
   handlers: ToolbarHandlers
