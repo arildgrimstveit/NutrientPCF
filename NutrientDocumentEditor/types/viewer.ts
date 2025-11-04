@@ -34,32 +34,9 @@ export interface RedactionAnnotation {
   rects: unknown; // Required: Must be PSPDFKit.Immutable.List<Rect>
 }
 
-export interface NutrientViewerAPI {
-  load: (config: {
-    disableWebAssemblyStreaming: boolean;
-    container: HTMLElement;
-    document: ArrayBuffer;
-    enableHistory: boolean;
-    locale?: string;
-  }) => Promise<NutrientViewerInstance>;
-  unload: (container: HTMLElement) => void;
-  Annotations: {
-    RedactionAnnotation: new (config: RedactionAnnotation) => unknown;
-  };
-  Geometry: {
-    Rect: new (config: Rect) => Rect;
-  };
-  Immutable: {
-    List: <T>(items: T[]) => unknown;
-  };
+export interface ErrorDetails {
+  code: string;
+  message: string;
+  technicalDetails: string;
+  timestamp: Date;
 }
-
-declare global {
-  interface Window {
-    NutrientViewer: NutrientViewerAPI;
-  }
-}
-
-export {};
-
-

@@ -2,6 +2,7 @@
  * Utilities for handling page redactions in Nutrient documents
  */
 
+import nutrient from "@nutrient-sdk/viewer";
 import { NutrientViewerInstance } from "../types";
 
 /**
@@ -19,7 +20,7 @@ export const redactPage = async (
     const { width, height } = pageInfo;
 
     // Create a rectangle covering the entire page
-    const boundingBox = new window.NutrientViewer.Geometry.Rect({
+    const boundingBox = new nutrient.Geometry.Rect({
       left: 0,
       top: 0,
       width: width,
@@ -27,10 +28,10 @@ export const redactPage = async (
     });
 
     // Create a redaction annotation covering the entire page
-    const redactionAnnotation = new window.NutrientViewer.Annotations.RedactionAnnotation({
+    const redactionAnnotation = new nutrient.Annotations.RedactionAnnotation({
       pageIndex: pageIndex,
       boundingBox: boundingBox,
-      rects: window.NutrientViewer.Immutable.List([boundingBox])
+      rects: nutrient.Immutable.List([boundingBox])
     });
 
     // Add the redaction annotation to the document

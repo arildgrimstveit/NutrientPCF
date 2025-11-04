@@ -1,22 +1,15 @@
 import * as React from "react";
-import { INutrientViewerProps, NutrientViewerInstance } from "./types";
+import nutrient from "@nutrient-sdk/viewer";
+import { INutrientViewerProps, NutrientViewerInstance, ErrorDetails } from "./types";
 import {
   convertBase64ToArrayBuffer,
   fetchDocumentFromUrl,
   convertArrayBufferToBase64,
-  loadNutrientScript,
   redactPages,
   parsePageRange,
   createToolbarConfig,
 } from "./utils";
 import { ProgressIndicator, RedactionDialog } from "./components";
-
-interface ErrorDetails {
-  code: string;
-  message: string;
-  technicalDetails: string;
-  timestamp: Date;
-}
 
 const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   documentBase64,
@@ -30,10 +23,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   const [loadingProgress, setLoadingProgress] = React.useState<{ loaded: number; total: number } | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<ErrorDetails | null>(null);
-  const [retryCount, setRetryCount] = React.useState(0);
-  
-  // Use a ref for initial mount check to avoid triggering effect re-runs
-  const isInitialMountRef = React.useRef(true);
+  const [retryTrigger, setRetryTrigger] = React.useState(false);
 
   // State for redaction dialog
   const [showRedactionDialog, setShowRedactionDialog] = React.useState(false);
@@ -45,54 +35,31 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   // Viewer initialization effect
   React.useEffect(() => {
     if (!documentBase64 && !documentUrl) {
-      // No document loaded yet - don't show error on initial mount
-      if (!isInitialMountRef.current) {
-        setError({
-          code: "NO_DOCUMENT",
-          message: "No document loaded",
-          technicalDetails: "No document source (base64 or URL) provided",
-          timestamp: new Date(),
-        });
-      }
       return;
     }
     
-    // Mark that we're past the initial mount
-    if (isInitialMountRef.current) {
-      isInitialMountRef.current = false;
-    }
-    
     if (!divRef.current) return;
-
     const containerElement = divRef.current;
-    let loadedInstance: NutrientViewerInstance | null = null;
     let isCancelled = false;
 
     const initViewer = async () => {
       try {
-        // Brief delay to allow Dynamics environment to stabilize
-        await new Promise(resolve => setTimeout(resolve, 200));
-
         if (isCancelled) return;
 
         setIsLoading(true);
         setError(null);
 
         // Unload any existing instance to prevent memory leaks
-        if (window.NutrientViewer && containerElement) {
+        if (containerElement) {
           try {
-            window.NutrientViewer.unload(containerElement);
+            nutrient.unload(containerElement);
           } catch (e) {
             // Ignore error if no instance was loaded
           }
         }
 
-        // Load the Nutrient SDK script
-        await loadNutrientScript();
-
         // Load the document
         let documentBuffer: ArrayBuffer;
-
         if (documentUrl) {
           documentBuffer = await fetchDocumentFromUrl(documentUrl, (loaded, total) => {
             setLoadingProgress({ loaded, total });
@@ -105,20 +72,14 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
 
         setLoadingProgress(null);
 
-        // Verify NutrientViewer API is available
-        const nutrient = window.NutrientViewer;
-        if (!nutrient) {
-          throw new Error("NutrientViewer API not available");
-        }
-
         // Load the Nutrient instance
-        loadedInstance = await nutrient.load({
+        const loadedInstance = await nutrient.load({
           disableWebAssemblyStreaming: true,
+          baseUrl: "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.8.0/",
           container: containerElement,
           document: documentBuffer,
-          enableHistory: true,
           locale: "nb-NO",
-        });
+        }) as unknown as NutrientViewerInstance;
 
         // Configure toolbar
         const toolbarItems = createToolbarConfig(loadedInstance, {
@@ -138,7 +99,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
               title: 'Slett annotering',
               icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
               onPress: async () => {
-                await loadedInstance!.delete(annotations);
+                await loadedInstance.delete(annotations);
               }
             },
             { type: 'spacer' },
@@ -149,7 +110,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
               icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 16.29a1 1 0 0 0 1.42 0l6-6a1 1 0 1 0-1.42-1.42L10 13.17l-2.29-2.3a1 1 0 1 0-1.42 1.42l3 3z"/></svg>',
               alignment: 'right',
               onPress: async () => {
-                await loadedInstance!.applyRedactions();
+                await loadedInstance.applyRedactions();
               }
             }
           ];
@@ -179,16 +140,15 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     // Cleanup on unmount
     return () => {
       isCancelled = true;
-      if (loadedInstance && containerElement) {
+      if (containerElement) {
         try {
-          window.NutrientViewer?.unload(containerElement);
+          nutrient.unload(containerElement);
         } catch (e) {
           console.warn("Error unloading Nutrient instance:", e);
         }
       }
     };
-  }, [documentBase64, documentUrl, retryCount]);
-  // Note: onSave is intentionally excluded from deps to prevent remount when PCF updateView creates new function reference
+  }, [documentBase64, documentUrl, retryTrigger]);
 
   // Handlers for redaction dialog
   const handleSubmit = React.useCallback(async () => {
@@ -224,8 +184,8 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     setDialogError("");
   }, []);
 
-  // Show a friendly "waiting for document" message on initial mount when no document is loaded
-  const showWaitingState = isInitialMountRef.current && !documentBase64 && !documentUrl;
+  // Show a friendly "waiting for document" message when no document is loaded
+  const showWaitingState = !documentBase64 && !documentUrl && !error;
 
   return (
     <div
@@ -274,7 +234,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
             📄 Venter på dokument
           </div>
           <div style={{ fontSize: "14px", color: "#605e5c", lineHeight: "1.5" }}>
-            Dokumentviseren er klar. Last inn et dokument for å komme i gang.
+            Last inn et dokument for å komme i gang.
           </div>
         </div>
       )}
@@ -337,7 +297,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
 
           <div style={{ marginBottom: "20px", paddingTop: "12px", borderTop: "1px solid #edebe9" }}>
             <div style={{ fontSize: "11px", color: "#a19f9d", marginBottom: "4px" }}>
-              Tekniske detaljer (send til utvikler):
+              Tekniske detaljer:
             </div>
             <div style={{
               fontSize: "11px",
@@ -358,7 +318,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
           <button
             onClick={() => {
               setError(null);
-              setRetryCount(retryCount + 1);
+              setRetryTrigger(prev => !prev);
             }}
             style={{
               width: "100%",

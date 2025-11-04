@@ -1,6 +1,10 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import NutrientViewerComponent from "./NutrientViewerComponent";
+import ExampleUsage from "./ExampleUsage";
 import * as React from "react";
+
+// Set to true for local testing with ExampleUsage component
+const USE_EXAMPLE = false;
 
 export class NutrientDocumentEditor
   implements ComponentFramework.ReactControl<IInputs, IOutputs>
@@ -42,6 +46,11 @@ export class NutrientDocumentEditor
   public updateView(
     context: ComponentFramework.Context<IInputs>
   ): React.ReactElement {
+    // Use ExampleUsage for local testing
+    if (USE_EXAMPLE) {
+      return React.createElement(ExampleUsage);
+    }
+
     const documentBase64 = context.parameters.document.raw ?? "";
     const documentUrl = context.parameters.documenturl.raw ?? "";
 

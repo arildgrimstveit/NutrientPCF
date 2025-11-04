@@ -3,7 +3,6 @@
  */
 
 export * from "./documentUtils";
-export * from "./scriptLoader";
 export * from "./redactionUtils";
 export * from "./toolbarConfig";
 
