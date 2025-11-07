@@ -37,7 +37,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     if (!documentBase64 && !documentUrl) {
       return;
     }
-    
+
     if (!divRef.current) return;
     const containerElement = divRef.current;
     let isCancelled = false;
@@ -75,11 +75,11 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         // Load the Nutrient instance
         const loadedInstance = await nutrient.load({
           disableWebAssemblyStreaming: true,
-          baseUrl: "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.8.0/",
+          baseUrl: "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.4.0/",
           container: containerElement,
           document: documentBuffer,
           locale: "nb-NO",
-        }) as NutrientViewerInstance;
+        }) as unknown as NutrientViewerInstance;
 
         // Configure toolbar
         const toolbarItems = createToolbarConfig(loadedInstance, {
@@ -123,7 +123,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         console.error("Error initializing Nutrient viewer:", err);
 
         const errorMessage = err instanceof Error ? err.message : String(err);
-        
+
         setError({
           message: errorMessage,
           technicalDetails: err instanceof Error ? err.stack ?? errorMessage : errorMessage,

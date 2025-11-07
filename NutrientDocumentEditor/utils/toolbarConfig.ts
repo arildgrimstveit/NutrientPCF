@@ -1,4 +1,4 @@
-import { NutrientViewerInstance } from "../types";
+import { NutrientViewerInstance, AnnotationCollection } from "../types";
 
 interface ToolbarHandlers {
   onShowRedactionDialog: () => void;
@@ -9,7 +9,7 @@ interface ToolbarHandlers {
 export const createToolbarConfig = (
   instance: NutrientViewerInstance,
   handlers: ToolbarHandlers
-) => [
+): import("../types").ToolbarItem[] => [
   // Navigation tools
   { type: "zoom-in" },
   { type: "zoom-out" },
@@ -43,7 +43,7 @@ export const createToolbarConfig = (
       const pages = await Promise.all(
         Array.from({ length: pageCount }).map((_, i) => instance.getAnnotations(i))
       );
-      const allAnnotations = pages.flatMap(annotations =>
+      const allAnnotations = pages.flatMap((annotations: AnnotationCollection) =>
         Array.isArray(annotations) ? annotations : annotations.toArray()
       );
       await instance.delete(allAnnotations);
