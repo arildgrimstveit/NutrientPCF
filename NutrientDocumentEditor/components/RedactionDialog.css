@@ -1,0 +1,121 @@
+.redaction-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.redaction-dialog-modal {
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  min-width: 450px;
+  max-width: 550px;
+}
+
+.redaction-dialog-header {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 18px;
+  font-weight: normal;
+}
+
+.redaction-options-container {
+  margin-bottom: 24px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.redaction-option {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 40px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.redaction-option:not(:last-child) {
+  border-bottom: 1px solid #ddd;
+}
+
+.redaction-option.selected {
+  background-color: #e3f2fd;
+}
+
+.redaction-option-radio-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redaction-option-radio {
+  cursor: pointer;
+  margin: 0;
+  pointer-events: none;
+}
+
+.redaction-option-label {
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.page-range-input {
+  padding: 4px 10px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  height: 28px;
+  box-sizing: border-box;
+  cursor: text;
+}
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 4px;
+  color: #c33;
+  font-size: 14px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  background-color: white;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
