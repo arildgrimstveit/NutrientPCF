@@ -1,6 +1,10 @@
 import * as React from "react";
 import nutrient from "@nutrient-sdk/viewer";
-import { INutrientViewerProps, NutrientViewerInstance, ErrorDetails } from "./types";
+import {
+  INutrientViewerProps,
+  NutrientViewerInstance,
+  ErrorDetails,
+} from "./types";
 import {
   convertBase64ToArrayBuffer,
   fetchDocumentFromUrl,
@@ -20,114 +24,128 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
   onSave,
 }) => {
   const divRef = React.useRef<HTMLDivElement>(null);
+
   const [instance, setInstance] = React.useState<NutrientViewerInstance | null>(null);
-  const [loadingProgress, setLoadingProgress] = React.useState<{ loaded: number; total: number } | null>(null);
+  const [loadingProgress, setLoadingProgress] =
+    React.useState<{ loaded: number; total: number } | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<ErrorDetails | null>(null);
   const [retryTrigger, setRetryTrigger] = React.useState(false);
 
-  // State for redaction dialog
+  // Redaction dialog state
   const [showRedactionDialog, setShowRedactionDialog] = React.useState(false);
   const [pageRangeInput, setPageRangeInput] = React.useState("");
-  const [selectedRedactionOption, setSelectedRedactionOption] = React.useState<"current" | "range">("current");
+  const [selectedRedactionOption, setSelectedRedactionOption] =
+    React.useState<"current" | "range">("current");
   const [dialogError, setDialogError] = React.useState("");
   const pageRangeInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Viewer initialization effect
+  /**
+   * Initialize viewer whenever base64 or URL changes.
+   * Proper unloading (sync) before loading the new document.
+   */
   React.useEffect(() => {
-    if (!documentBase64 && !documentUrl) {
-      return;
-    }
-
-    if (!divRef.current) return;
     const containerElement = divRef.current;
+    if (!containerElement) return;
+
     let isCancelled = false;
 
     const initViewer = async () => {
       try {
-        if (isCancelled) return;
-
         setIsLoading(true);
         setError(null);
 
-        // Unload any existing instance to prevent memory leaks
-        if (containerElement) {
-          try {
-            nutrient.unload(containerElement);
-          } catch (e) {
-            // Ignore error if no instance was loaded
-          }
+        // 🔥 ALWAYS unload old instance synchronously
+        try {
+          nutrient.unload(containerElement);
+        } catch {
+          /* ignore */
         }
 
-        // Load the document
+        if (!documentBase64 && !documentUrl) {
+          setIsLoading(false);
+          setInstance(null);
+          return;
+        }
+
+        // Load document buffer
         let documentBuffer: ArrayBuffer;
-        if (documentUrl) {
-          documentBuffer = await fetchDocumentFromUrl(documentUrl, (loaded, total) => {
-            setLoadingProgress({ loaded, total });
-          });
-        } else if (documentBase64) {
+
+        if (documentBase64) {
           documentBuffer = convertBase64ToArrayBuffer(documentBase64);
+        } else if (documentUrl) {
+          documentBuffer = await fetchDocumentFromUrl(documentUrl, (loaded, total) => {
+            if (!isCancelled) setLoadingProgress({ loaded, total });
+          });
         } else {
           throw new Error("No document available");
         }
 
+        if (isCancelled) return;
+
         setLoadingProgress(null);
 
-        // Load the Nutrient instance
-        const loadedInstance = await nutrient.load({
+        // Load viewer
+        const loadedInstance = (await nutrient.load({
           disableWebAssemblyStreaming: true,
           baseUrl: "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.4.0/",
           container: containerElement,
           document: documentBuffer,
           locale: "nb-NO",
-        }) as unknown as NutrientViewerInstance;
+        })) as unknown as NutrientViewerInstance;
 
-        // Configure toolbar
-        const toolbarItems = createToolbarConfig(loadedInstance, {
-          onShowRedactionDialog: () => setShowRedactionDialog(true),
-          onSave,
-          convertArrayBufferToBase64,
-        });
-        loadedInstance.setToolbarItems(toolbarItems);
 
-        // Configure annotation toolbar
+        if (isCancelled) {
+          try {
+            nutrient.unload(containerElement);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        // Toolbars
+        loadedInstance.setToolbarItems(
+          createToolbarConfig(loadedInstance, {
+            onShowRedactionDialog: () => setShowRedactionDialog(true),
+            onSave,
+            convertArrayBufferToBase64,
+          })
+        );
+
         loadedInstance.setAnnotationToolbarItems?.((annotation) => {
           const annotations = Array.isArray(annotation) ? annotation : [annotation];
           return [
             {
-              type: 'custom',
-              id: 'delete-selected',
-              title: 'Slett annotering',
-              icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
-              onPress: async () => {
-                await loadedInstance.delete(annotations);
-              }
+              type: "custom",
+              id: "delete-selected",
+              title: "Slett annotering",
+              icon: "<svg…/>",
+              onPress: async () => loadedInstance.delete(annotations),
             },
-            { type: 'spacer' },
+            { type: "spacer" },
             {
-              type: 'custom',
-              id: 'apply-redactions',
-              title: 'Sladd annoteringer',
-              icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 16.29a1 1 0 0 0 1.42 0l6-6a1 1 0 1 0-1.42-1.42L10 13.17l-2.29-2.3a1 1 0 1 0-1.42 1.42l3 3z"/></svg>',
-              alignment: 'right',
-              onPress: async () => {
-                await loadedInstance.applyRedactions();
-              }
-            }
+              type: "custom",
+              id: "apply-redactions",
+              title: "Sladd annoteringer",
+              icon: "<svg…/>",
+              alignment: "right",
+              onPress: async () => loadedInstance.applyRedactions(),
+            },
           ];
         });
 
-        setInstance(loadedInstance);
-        setIsLoading(false);
-
+        if (!isCancelled) {
+          setInstance(loadedInstance);
+          setIsLoading(false);
+        }
       } catch (err) {
-        console.error("Error initializing Nutrient viewer:", err);
+        if (isCancelled) return;
 
-        const errorMessage = err instanceof Error ? err.message : String(err);
-
+        const message = err instanceof Error ? err.message : String(err);
         setError({
-          message: errorMessage,
-          technicalDetails: err instanceof Error ? err.stack ?? errorMessage : errorMessage,
+          message,
+          technicalDetails: err instanceof Error ? err.stack ?? message : message,
         });
         setIsLoading(false);
         setLoadingProgress(null);
@@ -136,20 +154,27 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
 
     void initViewer();
 
-    // Cleanup on unmount
     return () => {
       isCancelled = true;
-      if (containerElement) {
-        try {
-          nutrient.unload(containerElement);
-        } catch (e) {
-          console.warn("Error unloading Nutrient instance:", e);
-        }
+    };
+  }, [documentBase64]);
+
+  /**
+   * Unload viewer on component unmount (sync)
+   */
+  React.useEffect(() => {
+    return () => {
+      const containerElement = divRef.current;
+      if (!containerElement) return;
+      try {
+        nutrient.unload(containerElement);
+      } catch {
+        /* ignore */
       }
     };
-  }, [documentBase64, documentUrl, retryTrigger]);
+  }, []);
 
-  // Handlers for redaction dialog
+  // REDACTION HANDLERS =======================================================
   const handleSubmit = React.useCallback(async () => {
     if (!instance) return;
 
@@ -160,7 +185,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
       if (selectedRedactionOption === "current") {
         setShowRedactionDialog(false);
         await redactPages(instance, [instance.viewState.currentPageIndex]);
-      } else if (selectedRedactionOption === "range") {
+      } else {
         const pageIndices = parsePageRange(pageRangeInput, totalPages);
         setShowRedactionDialog(false);
         setPageRangeInput("");
@@ -178,65 +203,34 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
     setDialogError("");
   }, []);
 
-  const handlePageRangeChange = React.useCallback((value: string) => {
-    setPageRangeInput(value);
-    setDialogError("");
-  }, []);
-
-  // Show a friendly "waiting for document" message when no document is loaded
-  const showWaitingState = !documentBase64 && !documentUrl && !error;
+  const showWaiting = !documentBase64 && !documentUrl && !error;
 
   return (
     <div
       className="nutrient-viewer-container"
-      style={{
-        height: `${viewerHeight}px`,
-        maxWidth: `${viewerWidth}px`,
-      }}
+      style={{ height: `${viewerHeight}px`, maxWidth: `${viewerWidth}px` }}
     >
-      <div
-        ref={divRef}
-        role="application"
-        aria-label="PDF Document Viewer"
-        aria-describedby="pdf-viewer-description"
-        tabIndex={0}
-        className="nutrient-viewer-div"
-      />
-      {showWaitingState && (
+      <div ref={divRef} className="nutrient-viewer-div" />
+
+      {showWaiting && (
         <div className="waiting-state-overlay">
-          <div className="waiting-state-title">
-            📄 Venter på dokument
-          </div>
-          <div className="waiting-state-description">
-            Last inn et dokument for å komme i gang.
-          </div>
+          <div className="waiting-state-title">📄 Venter på dokument</div>
+          <div>Last inn et dokument for å komme i gang.</div>
         </div>
       )}
+
       {error && (
         <div className="error-overlay">
-          <div className="error-title">
-            ⚠️ {error.message}
-          </div>
-
-          <div className="error-details">
-            {error.technicalDetails}
-          </div>
-
-          <button
-            className="retry-button"
-            onClick={() => {
-              setError(null);
-              setRetryTrigger(prev => !prev);
-            }}
-          >
+          <div className="error-title">⚠️ {error.message}</div>
+          <div className="error-details">{error.technicalDetails}</div>
+          <button className="retry-button" onClick={() => setRetryTrigger(p => !p)}>
             🔄 Prøv igjen
           </button>
         </div>
       )}
-      <ProgressIndicator
-        isLoading={isLoading}
-        loadingProgress={loadingProgress}
-      />
+
+      <ProgressIndicator isLoading={isLoading} loadingProgress={loadingProgress} />
+
       <RedactionDialog
         show={showRedactionDialog}
         instance={instance}
@@ -245,7 +239,7 @@ const NutrientViewerComponent: React.FC<INutrientViewerProps> = ({
         pageRangeInputRef={pageRangeInputRef}
         errorMessage={dialogError}
         onOptionChange={setSelectedRedactionOption}
-        onPageRangeChange={handlePageRangeChange}
+        onPageRangeChange={setPageRangeInput}
         onCancel={handleCancel}
         onSubmit={() => void handleSubmit()}
       />

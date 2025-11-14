@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="NutrientDocumentNamespaceV2" constructor="NutrientDocumentEditorV2" version="2.0.0" display-name-key="NutrientDocumentEditorV2" description-key="NutrientDocumentEditorV2 description" control-type="virtual">
+  <control namespace="NutrientDocumentNamespaceV2" constructor="NutrientDocumentEditorV2" version="5.0.0" display-name-key="NutrientDocumentEditorV2" description-key="NutrientDocumentEditorV2 description" control-type="virtual">
     
     <external-service-usage enabled="false" />
 

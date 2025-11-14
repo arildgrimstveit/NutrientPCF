@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-includes */
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import NutrientViewerComponent from "./NutrientViewerComponent";
 import ExampleUsage from "./ExampleUsage";
@@ -34,25 +35,32 @@ export class NutrientDocumentEditorV2
   public updateView(
     context: ComponentFramework.Context<IInputs>
   ): React.ReactElement {
-    // Use ExampleUsage for local testing
-    if (USE_EXAMPLE) {
-      return React.createElement(ExampleUsage);
-    }
+    // // Use ExampleUsage for local testing
+    // if (USE_EXAMPLE) {
+    //   return React.createElement(ExampleUsage);
+    // }
 
     const documentBase64 = context.parameters.document.raw ?? "";
     const documentUrl = context.parameters.documenturl.raw ?? "";
 
-    // Detect if a new document has been loaded
-    const isNewDocument = 
-      (documentBase64 !== this.lastDocumentBase64) || 
-      (documentUrl !== this.lastDocumentUrl);
+    // Check if the document property was updated
+    // Only process document changes if the document property was actually updated
 
-    // If it's a new document, reset our saved state
-    if (isNewDocument) {
-      this.lastDocumentBase64 = documentBase64;
-      this.lastDocumentUrl = documentUrl;
-      this.hasSavedVersion = false;
-      this.pdfBase64 = "";
+    if (context.updatedProperties.indexOf("document") > -1 || 
+        context.updatedProperties.indexOf("documenturl") > -1) {
+      
+      // Detect if a new document has been loaded
+      const isNewDocument = 
+        (documentBase64 !== this.lastDocumentBase64) || 
+        (documentUrl !== this.lastDocumentUrl);
+
+      // If it's a new document, reset our saved state
+      if (isNewDocument) {
+        this.lastDocumentBase64 = documentBase64;
+        this.lastDocumentUrl = documentUrl;
+        this.hasSavedVersion = false;
+        this.pdfBase64 = "";
+      }
     }
 
     // Determine which document to display:
@@ -61,7 +69,7 @@ export class NutrientDocumentEditorV2
     let displayDocumentBase64 = documentBase64;
     let displayDocumentUrl = documentUrl;
 
-    if (this.hasSavedVersion && !isNewDocument) {
+    if (this.hasSavedVersion && documentBase64 === this.lastDocumentBase64 && documentUrl === this.lastDocumentUrl) {
       // Show the saved (edited) version instead of the original
       displayDocumentBase64 = this.pdfBase64;
       displayDocumentUrl = ""; // Clear URL since we're using base64
